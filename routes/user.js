@@ -2,8 +2,32 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const {User} = require('../models');
 const router = express.Router();
+const passport = require('passport');
 
-router.post('/', async(req, res, next) => {
+router.post('/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        // 서버쪽에 에러가 있는 경우
+        if(err) {
+            console.error(error);
+            return next(err);
+        }
+        // 클라이언트에서 에러가 발생한 경우
+        if(info) {
+            return res.status(401).send(info.reason);
+        }
+        return req.login(user, async(loginErr) => {
+            // 패스포트에서 에러가 발생한 경우
+            if(loginErr) {
+                console.error(error);
+                return next(loginErr);
+            }
+            // 에러가 없을 경우
+            return res.json(user);
+        })
+    })(req,res,next);
+}); 
+
+router.post('/', async(req, res, next) => { //POST /user/
     try{
         // 프론트에서 보낸 이메일과 같은 이메일을 사용하는 사용자가 있는지를 exUser 변수에 저장
         // 없다면 null 
@@ -12,7 +36,7 @@ router.post('/', async(req, res, next) => {
                 email : req.body.email,
             }
         });
-        // 았다면
+        // 있다면
         if(exUser) {
             return res.status(403).send('이미 사용중인 아이디입니다.');
         }

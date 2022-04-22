@@ -4,6 +4,7 @@ const postRouter = require('./routes/post');
 const userRouter = require('./routes/user');
 
 const db = require('./models');
+const passportConfig = require('./passport');
 
 const app = express();
 
@@ -12,6 +13,7 @@ db.sequelize.sync()
         console.log('db 연결 성공');
     })
     .catch(console.error);
+passportConfig();
 
 app.use(cors({
     origin : true, // *은 모든 브라우저의 요청을 허용해 해커의 위험성이 있지만 true로 하면 보낸곳의 주소가 자동으로 들어간다.
