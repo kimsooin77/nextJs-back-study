@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const postRouter = require('./routes/post');
 const userRouter = require('./routes/user');
 
@@ -12,6 +13,10 @@ db.sequelize.sync()
     })
     .catch(console.error);
 
+app.use(cors({
+    origin : true, // *은 모든 브라우저의 요청을 허용해 해커의 위험성이 있지만 true로 하면 보낸곳의 주소가 자동으로 들어간다.
+    Credential : false,
+}));
 // 프론트 서버에서 보내준 액션데이터를 req.body안에 넣어주는 역할
 app.use(express.json()); // json 데이터 처리
 app.use(express.urlencoded( {extended : true})); // form submit시 urlencoded방식으로 처리

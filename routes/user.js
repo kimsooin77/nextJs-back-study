@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const {User} = require('../models');
 const router = express.Router();
 
-router.post('/', (req, res, next) => {
+router.post('/', async(req, res, next) => {
     try{
         // 프론트에서 보낸 이메일과 같은 이메일을 사용하는 사용자가 있는지를 exUser 변수에 저장
         // 없다면 null 
