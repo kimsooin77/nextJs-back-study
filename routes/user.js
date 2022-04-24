@@ -1,14 +1,16 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
-const {User} = require('../models');
-const router = express.Router();
 const passport = require('passport');
+const {User, Post} = require('../models');
+const router = express.Router();
+
 
 router.post('/login', (req, res, next) => {
+    // 여기서 user는 비밀번호는 있고 팔로잉, 팔로워에 대한 정보는 없는 유저이기 때문에 아래에서 다시 유저를 받아온다.
     passport.authenticate('local', (err, user, info) => {
         // 서버쪽에 에러가 있는 경우
         if(err) {
-            console.error(error);
+            console.error(err);
             return next(err);
         }
         // 클라이언트에서 에러가 발생한 경우
@@ -18,16 +20,32 @@ router.post('/login', (req, res, next) => {
         return req.login(user, async(loginErr) => {
             // 패스포트에서 에러가 발생한 경우
             if(loginErr) {
-                console.error(error);
+                console.error(loginErr);
                 return next(loginErr);
             }
+            // 비밀번호를 제외한 모든 유저 정보를 담은 변수
+            const fullUserWithoutPassword = await User.findOne({ 
+                where : { id : user.id},
+                attributes : {
+                    exclude : ['password'] // 보안에 취약한 비밀번호를 제외하고 정보를 받아오기 위한 설정
+                },
+                include : [{
+                    model : Post,
+                }, {
+                    model : User,
+                    as : 'Followings',
+                }, {
+                    model : User,
+                    as : 'Followers',
+                }]
+            })
             // 에러가 없을 경우
-            return res.json(user);
+            return res.status(200).json(fullUserWithoutPassword);
         })
-    })(req,res,next);
+    })(req, res, next);
 }); 
 
-router.post('/', async(req, res, next) => { //POST /user/
+router.post('/', async (req, res, next) => { //POST /user/
     try{
         // 프론트에서 보낸 이메일과 같은 이메일을 사용하는 사용자가 있는지를 exUser 변수에 저장
         // 없다면 null 
@@ -52,6 +70,12 @@ router.post('/', async(req, res, next) => { //POST /user/
         next(error); // status 500
     }
 });
+
+router.post('/user.logout', (req,res, next) => {
+    req.logout();
+    req.session.destroy();
+    res.send('ok');
+})
 
 module.exports = router;
 
