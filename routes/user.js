@@ -1,11 +1,14 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const passport = require('passport');
+
 const {User, Post} = require('../models');
+const { isLoggedIn, isNotLoggedIn} = require('./middlewares');
 const router = express.Router();
 
 
-router.post('/login', (req, res, next) => {
+// 로그인은 로그인을 안한 사람들만 할 수 있으므로 isNotLoggedIn을 전달
+router.post('/login',isNotLoggedIn, (req, res, next) => {
     // 여기서 user는 비밀번호는 있고 팔로잉, 팔로워에 대한 정보는 없는 유저이기 때문에 아래에서 다시 유저를 받아온다.
     passport.authenticate('local', (err, user, info) => {
         // 서버쪽에 에러가 있는 경우
@@ -45,7 +48,7 @@ router.post('/login', (req, res, next) => {
     })(req, res, next);
 }); 
 
-router.post('/', async (req, res, next) => { //POST /user/
+router.post('/',isNotLoggedInasync, (req, res, next) => { //POST /user/
     try{
         // 프론트에서 보낸 이메일과 같은 이메일을 사용하는 사용자가 있는지를 exUser 변수에 저장
         // 없다면 null 
@@ -71,7 +74,7 @@ router.post('/', async (req, res, next) => { //POST /user/
     }
 });
 
-router.post('/user.logout', (req,res, next) => {
+router.post('/logout', isLoggedIn, (req,res, next) => {
     req.logout();
     req.session.destroy();
     res.send('ok');
@@ -83,3 +86,5 @@ module.exports = router;
 // 두번째로 전송해 주는 숫자는 보통 10-13 사이의 수인데 수가 높을 수록 암호화의 수준이 높아진다.
 // 이메일 중복체크 하기 위해 findeOne 사용 조건은 where안에 명시
 // 요청/응답은 헤더(상태, 용량, 시간, 쿠키)와 바디(데이터)로 구성되어있다.
+
+// req, res, next -> 미들웨어
