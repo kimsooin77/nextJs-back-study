@@ -1,11 +1,11 @@
 const express = require('express');
 
-const { Post, Image, Comment } = require('../models');
+const { Post, Image, Comment, User } = require('../models');
 const {isLoggedIn} = require('./middlewares');
 
 const router = express.Router();
 
-router.post('/',isLoggedIn,  async (req,res) => { // POST/post
+router.post('/',isLoggedIn,  async (req,res, next) => { // POST/post
     try {
         const post = await Post.create({
             content : req.body.content,
@@ -17,8 +17,11 @@ router.post('/',isLoggedIn,  async (req,res) => { // POST/post
                 model : Image,
             }, {
                 model : Comment,
+                include  : User,
+                attributes : ['id', 'nickname']
             }, {
                 model : User,
+                attributes : ['id', 'nickname']
             }]
         })
         res.status(201).json(fullPost); // 프론트에서 받아온 데이터를 다시 json 형태로 돌려줌
@@ -40,10 +43,17 @@ router.post('/:postId/comment',isLoggedIn, async (req,res) => { // POST/post/com
         }
         const comment = await Comment.create({
             content : req.body.content,
-            PostId : req.params.postId,
+            PostId : parseInt(req.params.postId, 10),
             UserId : req.user.id,
         })
-        res.status(201).json(comment);
+        const fullComment = await Comment.findOne({
+            where : {id : comment.id},
+            include : [{
+                model : User,
+                attributes : ['id', 'nickname']
+            }]
+        })
+        res.status(201).json(fullComment);
     }catch (error) {
         console.error(error);
         next(error);

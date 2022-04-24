@@ -4,8 +4,10 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const dotenv = require('dotenv');
+const morgan = require('morgan');
 
 const postRouter = require('./routes/post');
+const postsRouter = require('./routes/posts');
 const userRouter = require('./routes/user');
 const db = require('./models');
 const passportConfig = require('./passport');
@@ -21,6 +23,7 @@ db.sequelize.sync()
     .catch(console.error);
 passportConfig();
 
+app.use(morgan('dev'));
 app.use(cors({
     origin : 'http://localhost:3060', // *은 모든 브라우저의 요청을 허용해 해커의 위험성이 있지만 true로 하면 보낸곳의 주소가 자동으로 들어간다.
     // 단 아래줄의 credentials를 true로 설정해줄 경우 민감한 정보가 담겨있는 쿠키가 왔다갔다하므로 origin을 *로 해주는 것이 불가능함.(true는 가능)
@@ -57,6 +60,7 @@ app.get('/' , (req,res) => {
     res.send('hellow api');
 });
 
+app.use('/posts', postsRouter);
 app.get('/posts', (req,res) => {
     res.json([
         {id : 1, content: 'hello'},
