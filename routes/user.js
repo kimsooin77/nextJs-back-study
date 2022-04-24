@@ -9,10 +9,29 @@ const router = express.Router();
 // 새로고침시에도 로그인 정보가 저장되도록 사용자 아이디 불러오기
 router.get('/', async (req, res, next) => { // GET /user
     try {
-        const user = await User.findOne({
-            where : {id : req.user.id}
-        })
-        res.status(200).json(user);
+        if(req.user) { // 로그인 되어있는 상태일 때(req.user가 존재하므로 true)만 유저 아이디 가져오기 
+            const fullUserWithoutPassword = await User.findOne({ 
+                where : { id : req.user.id},
+                attributes : {
+                    exclude : ['password'] // 보안에 취약한 비밀번호를 제외하고 정보를 받아오기 위한 설정
+                },
+                include : [{
+                    model : Post,
+                    attributes : ['id'],
+                }, {
+                    model : User,
+                    as : 'Followings',
+                    attributes : ['id'],
+                }, {
+                    model : User,
+                    as : 'Followers',
+                    attributes : ['id'],
+                }]
+            })
+            res.status(200).json(fullUserWithoutPassword);
+        }else { // 로그아웃 상태에서는 req.user이 없으므로 아무것도 전송하지 않음.
+            res.status(200).json(null);
+        }
     }catch (error){
         console.err(error);
         next(error);
@@ -48,12 +67,15 @@ router.post('/login',isNotLoggedIn, (req, res, next) => {
                 },
                 include : [{
                     model : Post,
+                    attributes : ['id'],
                 }, {
                     model : User,
                     as : 'Followings',
+                    attributes : ['id'],
                 }, {
                     model : User,
                     as : 'Followers',
+                    attributes : ['id'],
                 }]
             })
             // 에러가 없을 경우
