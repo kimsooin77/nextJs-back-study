@@ -6,6 +6,20 @@ const {User, Post} = require('../models');
 const { isLoggedIn, isNotLoggedIn} = require('./middlewares');
 const router = express.Router();
 
+// 새로고침시에도 로그인 정보가 저장되도록 사용자 아이디 불러오기
+router.get('/', async (req, res, next) => { // GET /user
+    try {
+        const user = await User.findOne({
+            where : {id : req.user.id}
+        })
+        res.status(200).json(user);
+    }catch (error){
+        console.err(error);
+        next(error);
+    }
+
+})
+
 
 // 로그인은 로그인을 안한 사람들만 할 수 있으므로 isNotLoggedIn을 전달
 router.post('/login',isNotLoggedIn, (req, res, next) => {
@@ -48,7 +62,7 @@ router.post('/login',isNotLoggedIn, (req, res, next) => {
     })(req, res, next);
 }); 
 
-router.post('/',isNotLoggedInasync, (req, res, next) => { //POST /user/
+router.post('/',isNotLoggedIn, async (req, res, next) => { //POST /user/
     try{
         // 프론트에서 보낸 이메일과 같은 이메일을 사용하는 사용자가 있는지를 exUser 변수에 저장
         // 없다면 null 

@@ -22,8 +22,10 @@ db.sequelize.sync()
 passportConfig();
 
 app.use(cors({
-    origin : true, // *은 모든 브라우저의 요청을 허용해 해커의 위험성이 있지만 true로 하면 보낸곳의 주소가 자동으로 들어간다.
-    // credentials : false,
+    origin : 'http://localhost:3060', // *은 모든 브라우저의 요청을 허용해 해커의 위험성이 있지만 true로 하면 보낸곳의 주소가 자동으로 들어간다.
+    // 단 아래줄의 credentials를 true로 설정해줄 경우 민감한 정보가 담겨있는 쿠키가 왔다갔다하므로 origin을 *로 해주는 것이 불가능함.(true는 가능)
+    // 더 보안을 철저히 하기 위해 정확한 도메인 주소를 적어주어야한다.
+    credentials : true, // credentail true를 설정해줌으로써 백서버에서 프론트 서버로 쿠키도 같이 전달이 가능해짐.
 }));
 // 프론트 서버에서 보내준 액션데이터를 req.body안에 넣어주는 역할
 app.use(express.json()); // json 데이터 처리
