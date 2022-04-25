@@ -17,8 +17,10 @@ router.post('/',isLoggedIn,  async (req,res, next) => { // POST/post
                 model : Image,
             }, {
                 model : Comment,
-                include  : User, // 댓글 작성자
-                attributes : ['id', 'nickname']
+                include  : [{
+                    model : User, // 댓글 작성자
+                    attributes : ['id', 'nickname']
+                }],
             }, {
                 model : User, // 게시글 작성자
                 attributes : ['id', 'nickname']
@@ -94,7 +96,19 @@ router.delete('/:postId/like',isLoggedIn, async (req, res, next) => { // DELETE/
     }
 });
 
-router.delete('/', (req,res) => {
-    res.json({id : 1});
+// 게시글 삭제
+router.delete('/:postId', async (req,res,next) => { // DELETE /post/10
+    try {
+        await Post.destroy({
+            where : {
+                id : req.params.postId,
+                UserId : req.user.id, // 내가 작성한s 포스트만 지우게 하기 위해 사용자 아이디도 조건으로 넣어줌.
+            },
+        })
+        res.status(200).json({PostId : parseInt(req.params.postId, 10)}); // params는 문자열이기 때문에 반드시 parseInt로 숫자로 바꿔줘야함
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
 });
 module.exports = router;
