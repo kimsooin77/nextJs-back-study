@@ -1,9 +1,19 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const { Post, Image, Comment, User } = require('../models');
 const {isLoggedIn} = require('./middlewares');
 
 const router = express.Router();
+
+try{
+    fs.accessSync('uploads');
+}catch(error) {
+    console.error('uploads 폴더가 없으므로 생성합니다.');
+    fs.mkdirSync('uploads');
+}
 
 router.post('/',isLoggedIn,  async (req,res, next) => { // POST/post
     try {
@@ -35,8 +45,29 @@ router.post('/',isLoggedIn,  async (req,res, next) => { // POST/post
         console.error(error);
         next(error);
     }
-    
 });
+
+// 이미지나 비디오, 텍스트 등의 소스를 위한 미들웨어 multer
+const upload = multer({
+    storage : multer.diskStorage({
+        destination(req, file, done) {
+            done(null, 'uploads');
+        },
+        filename(req, file, done) { // 김수인.png
+            const ext = path.extname(file.originalname); // 확장자 추출(.png)
+            const basename = path.basename(file.originalname, ext); // 김수인20220426123315.png
+            done(null, basename + '_' + new Date().getTime() + ext); // 날짜를 넣어주는 이유는 파일명이 겹치는 경우 덮어씌우는걸 방지하기 위함
+        },
+    }),
+    limits : {fileSize : 20 * 1024 * 1024}, // 20MB
+})
+
+// array인 이유는 여러장을 올리기 위해(image는 postForm에 Input의 name="image"에서 가져온 것)
+// 이미지는 위의 upload에서 올려주고 아래 router는 이미지 업로드 후에 실행된다.
+router.post('/images', isLoggedIn, upload.array('image'), (req,res,next) => { // POST/post/images
+    console.log(req.files);
+    res.json(req.files.map((v) => v.filename));
+})
 
 router.post('/:postId/comment',isLoggedIn, async (req,res) => { // POST/post/comment
     try {
