@@ -131,6 +131,76 @@ router.patch('/nickname', isLoggedIn, async (req, res, next) => {
     }
 })
 
+router.patch('/:userId/follow',isLoggedIn, async (req, res, next) => { // PATCH/user/1/follow
+    try {
+        const user = await User.findOne({ where : {id : req.params.userId}});
+        if(!user) {
+            return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
+        }
+        await user.addFollowers(req.user.id); // 팔로우 하는 대상의 팔로워에 내 아이디를 넣어줌
+        res.status(200).json({UserId : parseInt(req.params.userId, 10)}); // 상대방 아이디
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
+});
+
+router.delete('/:userId/follow',isLoggedIn, async (req, res, next) => { // DELETE/user/1/follow
+    try {
+        const user = await User.findOne({ where : {id : req.params.userId}});
+        if(!user) {
+            return res.status(403).send('언팔로우하는 대상을 선택해 주세요.');
+        }
+        await user.removeFollowers(req.user.id); // 상대방의 팔로워에서 내 아이디를 제거
+        res.status(200).json({UserId : parseInt(req.params.userId, 10)});
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
+});
+
+router.get('/followers',isLoggedIn, async (req, res, next) => { // GET/user/followers
+    try {
+        const user = await User.findOne({ where : {id : req.user.id}});
+        if(!user) {
+            return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
+        }
+        const followers = await user.getFollowers();
+        res.status(200).json(followers);
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
+});
+
+router.delete('/follower/:userId',isLoggedIn, async (req, res, next) => { // DELETE/user/follower/2
+    try {
+        const user = await User.findOne({ where : {id : req.params.userId}});
+        if(!user) {
+            return res.status(403).send('차단하는 대상을 선택해 주세요.');
+        }
+        await user.removeFollowings(req.user.id); // 상대방의 팔로잉에서 내 아이디를 제거
+        res.status(200).json({UserId : parseInt(req.params.userId, 10)});
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
+});
+
+router.get('/followings',isLoggedIn, async (req, res, next) => { // GET/user/followings
+    try {
+        const user = await User.findOne({ where : {id : req.user.id}});
+        if(!user) {
+            return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
+        }
+        const followings = await user.getFollowings();
+        res.status(200).json(followings);
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
+});
+
 module.exports = router;
 
 // 비밀번호를 그대로 전송할 시 해킹의 위험이 있으므로 bcrypt라는 라이브러리를 사용하여 암호화해 전달해준다.
