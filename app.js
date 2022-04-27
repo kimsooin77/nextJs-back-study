@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const passport = require('passport');
 const dotenv = require('dotenv');
 const morgan = require('morgan');
+const path = require('path');
 
 const postRouter = require('./routes/post');
 const postsRouter = require('./routes/posts');
@@ -30,6 +31,12 @@ app.use(cors({
     // 더 보안을 철저히 하기 위해 정확한 도메인 주소를 적어주어야한다.
     credentials : true, // credentail true를 설정해줌으로써 백서버에서 프론트 서버로 쿠키도 같이 전달이 가능해짐.
 }));
+
+// 서버 주소가 프론트는 3060 백은 3065로 달라 이미지가 전달이 안되므로 static이라는
+// 미들웨어를 사용하여 디렉토리네임이 uploads인것을 찾아 경로를 localhost:3065/uploads로 바꿔준다.
+// 프론트에서는 슬래쉬로 해당 파일을 접근하고 백엔드쪽의 폴더 구조를 알 방법이 없기 때문에
+// 보안상 유리한 점이 있다.
+app.use('/', express.static(path.join(__dirname, 'uploads')));
 // 프론트 서버에서 보내준 액션데이터를 req.body안에 넣어주는 역할
 app.use(express.json()); // json 데이터 처리
 app.use(express.urlencoded( {extended : true})); // form submit시 urlencoded방식으로 처리
