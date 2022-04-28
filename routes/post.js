@@ -15,12 +15,37 @@ try{
     fs.mkdirSync('uploads');
 }
 
-router.post('/',isLoggedIn,  async (req,res, next) => { // POST/post
+// 이미지나 비디오, 텍스트 등의 소스를 위한 미들웨어 multer
+const upload = multer({
+    storage : multer.diskStorage({
+        destination(req, file, done) {
+            done(null, 'uploads');
+        },
+        filename(req, file, done) { // 김수인.png
+            const ext = path.extname(file.originalname); // 확장자 추출(.png)
+            const basename = path.basename(file.originalname, ext); // 김수인20220426123315.png
+            done(null, basename + '_' + new Date().getTime() + ext); // 날짜를 넣어주는 이유는 파일명이 겹치는 경우 덮어씌우는걸 방지하기 위함
+        },
+    }),
+    limits : {fileSize : 20 * 1024 * 1024}, // 20MB
+});
+
+router.post('/',isLoggedIn, upload.none(),  async (req,res, next) => { // POST/post
     try {
         const post = await Post.create({
             content : req.body.content,
             UserId : req.user.id,
         });
+        if(req.body.image) {
+            if(Array.isArray(req.body.image)) { // 이미지를 여러 개 올리면 image : [sooin.png, kimsoo.png]이런 배열 형식으로 디비가 생성되고
+                const images = await Promise.all(req.body.image.map((image) => Image.create({src : image})));
+                await post.addImages(images);
+            }else { // 이미지를 하나만 올리면 image : 김수.png로 배열이 아닌 형태로 디비에 생성된다.
+                const image = await Image.create({src : req.body.image});
+                await post.addImages(image);
+            }
+        }
+
         const fullPost = await Post.findOne({
             where : { id : post.id},
             include : [{
@@ -47,27 +72,14 @@ router.post('/',isLoggedIn,  async (req,res, next) => { // POST/post
     }
 });
 
-// 이미지나 비디오, 텍스트 등의 소스를 위한 미들웨어 multer
-const upload = multer({
-    storage : multer.diskStorage({
-        destination(req, file, done) {
-            done(null, 'uploads');
-        },
-        filename(req, file, done) { // 김수인.png
-            const ext = path.extname(file.originalname); // 확장자 추출(.png)
-            const basename = path.basename(file.originalname, ext); // 김수인20220426123315.png
-            done(null, basename + '_' + new Date().getTime() + ext); // 날짜를 넣어주는 이유는 파일명이 겹치는 경우 덮어씌우는걸 방지하기 위함
-        },
-    }),
-    limits : {fileSize : 20 * 1024 * 1024}, // 20MB
-})
+
 
 // array인 이유는 여러장을 올리기 위해(image는 postForm에 Input의 name="image"에서 가져온 것)
 // 이미지는 위의 upload에서 올려주고 아래 router는 이미지 업로드 후에 실행된다.
 router.post('/images', isLoggedIn, upload.array('image'), (req,res,next) => { // POST/post/images
     console.log(req.files);
     res.json(req.files.map((v) => v.filename));
-})
+});
 
 router.post('/:postId/comment',isLoggedIn, async (req,res) => { // POST/post/comment
     try {
