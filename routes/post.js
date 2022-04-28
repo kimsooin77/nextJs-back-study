@@ -5,6 +5,7 @@ const fs = require('fs');
 
 const { Post, Image, Comment, User, Hashtag } = require('../models');
 const {isLoggedIn} = require('./middlewares');
+const { restart } = require('nodemon');
 
 const router = express.Router();
 
@@ -115,7 +116,76 @@ router.post('/:postId/comment',isLoggedIn, async (req,res) => { // POST/post/com
         console.error(error);
         next(error);
     }
-    
+});
+
+router.post('/:postId/retweet',isLoggedIn, async (req,res, next) => { // POST/post/1/retweet
+    try {
+        // 존재하지 않는 포스트에 댓글이 생성되거나 삭제되는것을 방지하기 위해 포스트의 존재여부를 먼저 검사
+        const post = await Post.findOne({
+            where : {id : req.params.postId}, 
+            include : [{
+                model : Post,
+                as : 'Retweet',
+            }],
+        });
+        if(!post) {
+            return res.status(403).send('존재하지 않는 게시글입니다.');
+        }
+        // 1. 내 아이디와 리트윗하고자 하는 포스터의 사용자 아이디가 같을 경우(내가 내 포스팅을 리트윗하려는경우)
+        // 2. 리트윗된 포스터가 있는데 그 리트윗된 포스터의 사용자 아이디와 내 아아디가 같을 때 (다른사람이 리트윗한 내 포스터를 내가 다시 리트윗하고자 할때)
+        if (req.user.id === post.UserId || (post.Retweet && post.Retweet.UserId === req.user.id)) {
+            return res.status(403).send('자신의 글은 리트윗할 수 없습니다.');
+        }
+        // 사람1이 작성한 게시글을 사람2가 리트윗한 후 내가 다시 사람2의 리트윗된 게시글을 리트윗하고자 할때
+        // 이미 리트윗된 게시글이라면 post.RetweetId를 사용하고 내가 처음으로 리트윗하는 포스터이면 post의 아이디를 사용
+        const retweetTargetId = post.RetweetId || post.id;
+        const exPost = await Post.findOne({
+            where : {
+                UserId  :  req.user.id,
+                RetweetId : retweetTargetId,
+            },
+        });
+        if(exPost) {
+            return res.status(403).send('이미 리트윗된 게시글입니다.');
+        }
+        const retweet = await Post.create({
+            UserId : req.user.id,
+            RetweetId : retweetTargetId,
+            content : 'retweet',
+        });
+        const retweetWithPrevPost = await Post.findOne({
+            where : {id : retweet.id},
+            include : [{
+                model : Post,
+                as : 'Retweet',
+                include : [{
+                    model : User,
+                    attributes : ['id', 'nickname'],
+                }, {
+                    model : Image,
+                }] 
+            }, {
+                model : User,
+                attributes : ['id', 'nickname'],
+            }, {
+                model : Image,
+            }, {
+                model : Comment,
+                include : [{
+                    model : User,
+                    attributes : ['id', 'nickname'],
+                },]
+            },{
+                model : User,
+                as : 'Likers',
+                attributes : ['id'],
+            }],
+        })
+        res.status(201).json(retweetWithPrevPost);
+    }catch (error) {
+        console.error(error);
+        next(error);
+    }
 });
 
 router.patch('/:postId/like',isLoggedIn, async (req, res, next) => { // PATCH/post/1/like
