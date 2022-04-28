@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const { Post, Image, Comment, User } = require('../models');
+const { Post, Image, Comment, User, Hashtag } = require('../models');
 const {isLoggedIn} = require('./middlewares');
 
 const router = express.Router();
@@ -32,10 +32,18 @@ const upload = multer({
 
 router.post('/',isLoggedIn, upload.none(),  async (req,res, next) => { // POST/post
     try {
+        const hashtags = req.body.content.match(/#[^\s#]+/g);
         const post = await Post.create({
             content : req.body.content,
             UserId : req.user.id,
         });
+        if(hashtags) { // findOrCreate는 디비에 해쉬태그가 중복해서 등록되는걸 막기 위해 가져오거나 없으면 등록하는 메소드이다.
+            const result = await Promise.all(hashtags.map((tag) =>  Hashtag.findOrCreate({
+                where : { name : tag.slice(1).toLowerCase() }
+            }))); // result의 모양은 [노드, true], [리액트, true] 이런식으로 배열로 담기는데 첫번째는 해쉬태그이름 두번째는 생성됐는지가 불리언 값으로 
+            // 들어가기 때문에 0번째 인덱스만 추출해서 더해준다.
+            await post.addHashtags(result.map((v) => v[0]) );
+        }
         if(req.body.image) {
             if(Array.isArray(req.body.image)) { // 이미지를 여러 개 올리면 image : [sooin.png, kimsoo.png]이런 배열 형식으로 디비가 생성되고
                 const images = await Promise.all(req.body.image.map((image) => Image.create({src : image})));
