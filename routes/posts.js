@@ -1,4 +1,5 @@
 const express = require('express');
+const {Op} = require('sequelize');
 
 const {Post, Image, User, Comment} = require('../models');
 
@@ -6,6 +7,11 @@ const router = express.Router();
 
 router.get('/', async (req, res, next) => { // GET/posts
     try {
+        const where = {};
+        if(parseInt(req.query.lastId, 10)) { // 초기 로딩이 아닐 떼(스크롤 내려서 더 불러올떼)
+            where.id = { [Op.lt] : parseInt(req.query.lastId, 10)} // = lastId보다 작은 10개를 불러오기(Op = operator / lt = limit)
+            // 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1
+        }
         const posts = await Post.findAll({
             limit : 10,
             order : [
