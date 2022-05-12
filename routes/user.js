@@ -8,6 +8,7 @@ const router = express.Router();
 
 // 새로고침시에도 로그인 정보가 저장되도록 사용자 아이디 불러오기
 router.get('/', async (req, res, next) => { // GET /user
+    console.log(req.headers);
     try {
         if(req.user) { // 로그인 되어있는 상태일 때(req.user가 존재하므로 true)만 유저 아이디 가져오기 
             const fullUserWithoutPassword = await User.findOne({ 
@@ -33,12 +34,39 @@ router.get('/', async (req, res, next) => { // GET /user
             res.status(200).json(null);
         }
     }catch (error){
-        console.err(error);
+        console.error(error);
         next(error);
     }
 
 })
 
+router.get('/followers',isLoggedIn, async (req, res, next) => { // GET/user/followers
+    try {
+        const user = await User.findOne({ where : {id : req.user.id}});
+        if(!user) {
+            return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
+        }
+        const followers = await user.getFollowers();
+        res.status(200).json(followers);
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
+});
+
+router.get('/followings',isLoggedIn, async (req, res, next) => { // GET/user/followings
+    try {
+        const user = await User.findOne({ where : {id : req.user.id}});
+        if(!user) {
+            return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
+        }
+        const followings = await user.getFollowings();
+        res.status(200).json(followings);
+    }catch(error) {
+        console.error(error);
+        next(error);
+    }
+});
 
 // 로그인은 로그인을 안한 사람들만 할 수 있으므로 isNotLoggedIn을 전달
 router.post('/login',isNotLoggedIn, (req, res, next) => {
@@ -53,7 +81,7 @@ router.post('/login',isNotLoggedIn, (req, res, next) => {
         if(info) {
             return res.status(401).send(info.reason);
         }
-        return req.login(user, async(loginErr) => {
+        return req.login(user, async (loginErr) => {
             // 패스포트에서 에러가 발생한 경우
             if(loginErr) {
                 console.error(loginErr);
@@ -103,7 +131,7 @@ router.post('/',isNotLoggedIn, async (req, res, next) => { //POST /user/
             nickname : req.body.nickname,
             password : hashedPassword,
         });
-        res.status(200).send('ok');
+        res.status(201).send('ok');
     }catch (error) {
         console.error(error);
         next(error); // status 500
@@ -159,19 +187,7 @@ router.delete('/:userId/follow',isLoggedIn, async (req, res, next) => { // DELET
     }
 });
 
-router.get('/followers',isLoggedIn, async (req, res, next) => { // GET/user/followers
-    try {
-        const user = await User.findOne({ where : {id : req.user.id}});
-        if(!user) {
-            return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
-        }
-        const followers = await user.getFollowers();
-        res.status(200).json(followers);
-    }catch(error) {
-        console.error(error);
-        next(error);
-    }
-});
+
 
 router.delete('/follower/:userId',isLoggedIn, async (req, res, next) => { // DELETE/user/follower/2
     try {
@@ -187,19 +203,9 @@ router.delete('/follower/:userId',isLoggedIn, async (req, res, next) => { // DEL
     }
 });
 
-router.get('/followings',isLoggedIn, async (req, res, next) => { // GET/user/followings
-    try {
-        const user = await User.findOne({ where : {id : req.user.id}});
-        if(!user) {
-            return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
-        }
-        const followings = await user.getFollowings();
-        res.status(200).json(followings);
-    }catch(error) {
-        console.error(error);
-        next(error);
-    }
-});
+
+
+
 
 module.exports = router;
 

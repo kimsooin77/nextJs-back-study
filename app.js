@@ -63,19 +63,8 @@ app.get('/' , (req,res) => {
     res.send('hellow express');
 });
 
-app.get('/' , (req,res) => {
-    res.send('hellow api');
-});
 
 app.use('/posts', postsRouter);
-app.get('/posts', (req,res) => {
-    res.json([
-        {id : 1, content: 'hello'},
-        {id : 2, content: 'hello2'},
-        {id : 3, content: 'hello3'},
-    ])
-});
-
 app.use('/post', postRouter);
 app.use('/user', userRouter);
 

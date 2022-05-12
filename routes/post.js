@@ -5,7 +5,6 @@ const fs = require('fs');
 
 const { Post, Image, Comment, User, Hashtag } = require('../models');
 const {isLoggedIn} = require('./middlewares');
-const { restart } = require('nodemon');
 
 const router = express.Router();
 
@@ -112,6 +111,49 @@ router.post('/:postId/comment',isLoggedIn, async (req,res) => { // POST/post/com
             }]
         })
         res.status(201).json(fullComment);
+    }catch (error) {
+        next(error);
+    }
+});
+
+router.get('/:postId', async (req,res, next) => { // GET/post/1
+    try {
+        // 존재하지 않는 포스트에 댓글이 생성되거나 삭제되는것을 방지하기 위해 포스트의 존재여부를 먼저 검사
+        const post = await Post.findOne({
+            where : {id : req.params.postId}, 
+        });
+        if(!post) {
+            return res.status(404).send('존재하지 않는 게시글입니다.');
+        }
+        const fullPost = await Post.findOne({
+            where : {id : post.id},
+            include : [{
+                model : Post,
+                as : 'Retweet',
+                include : [{
+                    model : User,
+                    attributes : ['id', 'nickname'],
+                }, {
+                    model : Image,
+                }] 
+            }, {
+                model : User,
+                attributes : ['id', 'nickname'],
+            }, {
+                model : Image,
+            }, {
+                model : Comment,
+                include : [{
+                    model : User,
+                    attributes : ['id', 'nickname'],
+                },]
+            },{
+                model : User,
+                as : 'Likers',
+                attributes : ['id'],
+            }],
+        })
+        res.status(202).json(fullPost);
     }catch (error) {
         console.error(error);
         next(error);
