@@ -47,7 +47,9 @@ router.get('/followers',isLoggedIn, async (req, res, next) => { // GET/user/foll
         if(!user) {
             return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
         }
-        const followers = await user.getFollowers();
+        const followers = await user.getFollowers({
+            limit : parseInt(req.query.limit, 10),
+        });
         res.status(200).json(followers);
     }catch(error) {
         console.error(error);
@@ -61,7 +63,9 @@ router.get('/followings',isLoggedIn, async (req, res, next) => { // GET/user/fol
         if(!user) {
             return res.status(403).send('팔로우하는 대상을 선택해 주세요.');
         }
-        const followings = await user.getFollowings();
+        const followings = await user.getFollowings({
+            limit : parseInt(req.query.limit, 10),
+        });
         res.status(200).json(followings);
     }catch(error) {
         console.error(error);
