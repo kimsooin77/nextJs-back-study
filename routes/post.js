@@ -89,33 +89,6 @@ router.post('/images', isLoggedIn, upload.array('image'), (req,res,next) => { //
     res.json(req.files.map((v) => v.filename));
 });
 
-router.post('/:postId/comment',isLoggedIn, async (req,res) => { // POST/post/comment
-    try {
-        // 존재하지 않는 포스트에 댓글이 생성되거나 삭제되는것을 방지하기 위해 포스트의 존재여부를 먼저 검사
-        const post = await Post.findOne({
-            where : {id : req.params.postId} // 위에서 :이 params 다음 postId이므로 postId
-        })
-        if(!post) {
-            return res.status(403).send('존재하지 않는 게시글입니다.');
-        }
-        const comment = await Comment.create({
-            content : req.body.content,
-            PostId : parseInt(req.params.postId, 10),
-            UserId : req.user.id,
-        })
-        const fullComment = await Comment.findOne({
-            where : {id : comment.id},
-            include : [{
-                model : User,
-                attributes : ['id', 'nickname']
-            }]
-        })
-        res.status(201).json(fullComment);
-    }catch (error) {
-        next(error);
-    }
-});
-
 router.get('/:postId', async (req,res, next) => { // GET/post/1
     try {
         // 존재하지 않는 포스트에 댓글이 생성되거나 삭제되는것을 방지하기 위해 포스트의 존재여부를 먼저 검사
@@ -137,23 +110,23 @@ router.get('/:postId', async (req,res, next) => { // GET/post/1
                     model : Image,
                 }] 
             }, {
-                model : User,
-                attributes : ['id', 'nickname'],
-            }, {
-                model : Image,
-            }, {
-                model : Comment,
-                include : [{
-                    model : User,
-                    attributes : ['id', 'nickname'],
-                },]
-            },{
-                model : User,
-                as : 'Likers',
-                attributes : ['id'],
-            }],
-        })
-        res.status(202).json(fullPost);
+                model: User,
+                attributes: ['id', 'nickname'],
+              }, {
+                model: User,
+                as: 'Likers',
+                attributes: ['id', 'nickname'],
+              }, {
+                model: Image,
+              }, {
+                model: Comment,
+                include: [{
+                  model: User,
+                  attributes: ['id', 'nickname'],
+                }],
+              }],
+            })
+            res.status(200).json(fullPost);
     }catch (error) {
         console.error(error);
         next(error);
@@ -209,26 +182,54 @@ router.post('/:postId/retweet',isLoggedIn, async (req,res, next) => { // POST/po
             }, {
                 model : User,
                 attributes : ['id', 'nickname'],
-            }, {
-                model : Image,
-            }, {
-                model : Comment,
-                include : [{
-                    model : User,
-                    attributes : ['id', 'nickname'],
-                },]
-            },{
-                model : User,
-                as : 'Likers',
-                attributes : ['id'],
-            }],
-        })
-        res.status(201).json(retweetWithPrevPost);
+            },  {
+                model: User, // 좋아요 누른 사람
+                as: 'Likers',
+                attributes: ['id'],
+              }, {
+                model: Image,
+              }, {
+                model: Comment,
+                include: [{
+                  model: User,
+                  attributes: ['id', 'nickname'],
+                }],
+              }],
+            })
+            res.status(201).json(retweetWithPrevPost);
     }catch (error) {
         console.error(error);
         next(error);
     }
 });
+
+router.post('/:postId/comment',isLoggedIn, async (req,res,next) => { // POST/post/comment
+    try {
+        // 존재하지 않는 포스트에 댓글이 생성되거나 삭제되는것을 방지하기 위해 포스트의 존재여부를 먼저 검사
+        const post = await Post.findOne({
+            where : {id : req.params.postId} // 위에서 :이 params 다음 postId이므로 postId
+        })
+        if(!post) {
+            return res.status(403).send('존재하지 않는 게시글입니다.');
+        }
+        const comment = await Comment.create({
+            content : req.body.content,
+            PostId : parseInt(req.params.postId, 10),
+            UserId : req.user.id,
+        })
+        const fullComment = await Comment.findOne({
+            where : {id : comment.id},
+            include : [{
+                model : User,
+                attributes : ['id', 'nickname']
+            }]
+        })
+        res.status(201).json(fullComment);
+    }catch (error) {
+        next(error);
+    }
+});
+
 
 router.patch('/:postId/like',isLoggedIn, async (req, res, next) => { // PATCH/post/1/like
     try {
@@ -260,7 +261,7 @@ router.delete('/:postId/like',isLoggedIn, async (req, res, next) => { // DELETE/
 });
 
 // 게시글 삭제
-router.delete('/:postId', async (req,res,next) => { // DELETE /post/10
+router.delete('/:postId',isLoggedIn, async (req,res,next) => { // DELETE /post/10
     try {
         await Post.destroy({
             where : {

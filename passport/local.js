@@ -7,7 +7,6 @@ module.exports = () => {
     passport.use(new LocalStrategy({
         usernameField : 'email', // req.body.email을 지칭
         passwordField : 'password', //  req.body.password를 지칭
-
     }, async (email, password, done) => {
         try {
             const user = await User.findOne({

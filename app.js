@@ -25,13 +25,25 @@ db.sequelize.sync()
     .catch(console.error);
 passportConfig();
 
-app.use(morgan('dev'));
-app.use(cors({
-    origin : 'http://localhost:3060', // *은 모든 브라우저의 요청을 허용해 해커의 위험성이 있지만 true로 하면 보낸곳의 주소가 자동으로 들어간다.
-    // 단 아래줄의 credentials를 true로 설정해줄 경우 민감한 정보가 담겨있는 쿠키가 왔다갔다하므로 origin을 *로 해주는 것이 불가능함.(true는 가능)
-    // 더 보안을 철저히 하기 위해 정확한 도메인 주소를 적어주어야한다.
-    credentials : true, // credentail true를 설정해줌으로써 백서버에서 프론트 서버로 쿠키도 같이 전달이 가능해짐.
-}));
+if (process.env.NODE_ENV === 'production') {
+    app.use(morgan('combined'));
+    app.use(hpp());
+    app.use(helmet({ contentSecurityPolicy: false }));
+    app.use(cors({
+      origin: 'http://nodebird.com',
+      credentials: true,
+    }));
+}else {
+    app.use(morgan('dev'));
+    app.use(cors({
+        origin : true, // *은 모든 브라우저의 요청을 허용해 해커의 위험성이 있지만 true로 하면 보낸곳의 주소가 자동으로 들어간다.
+        // 단 아래줄의 credentials를 true로 설정해줄 경우 민감한 정보가 담겨있는 쿠키가 왔다갔다하므로 origin을 *로 해주는 것이 불가능함.(true는 가능)
+        // 더 보안을 철저히 하기 위해 정확한 도메인 주소를 적어주어야한다.
+        credentials : true, // credentail true를 설정해줌으로써 백서버에서 프론트 서버로 쿠키도 같이 전달이 가능해짐.
+    }));
+}
+
+
 
 // 서버 주소가 프론트는 3060 백은 3065로 달라 이미지가 전달이 안되므로 static이라는
 // 미들웨어를 사용하여 디렉토리네임이 uploads인것을 찾아 경로를 localhost:3065/uploads로 바꿔준다.
@@ -43,9 +55,14 @@ app.use(express.json()); // json 데이터 처리
 app.use(express.urlencoded( {extended : true})); // form submit시 urlencoded방식으로 처리
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(session({
-    saveUninitialized : false,
-    resave : false,
-    secret : process.env.COOKIE_SECRET,
+    saveUninitialized: false,
+    resave: false,
+    secret: process.env.COOKIE_SECRET,
+    cookie: {
+      httpOnly: true,
+      secure: false,
+      domain: process.env.NODE_ENV === 'production' && '.nodebird.com'
+    },
 }));
 app.use(passport.initialize());
 app.use(passport.session());

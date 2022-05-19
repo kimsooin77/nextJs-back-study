@@ -9,7 +9,7 @@ const router = express.Router();
 
 // 새로고침시에도 로그인 정보가 저장되도록 사용자 아이디 불러오기
 router.get('/', async (req, res, next) => { // GET /user
-    console.log(req.headers);
+    console.log(req.user);
     try {
         if(req.user) { // 로그인 되어있는 상태일 때(req.user가 존재하므로 true)만 유저 아이디 가져오기 
             const fullUserWithoutPassword = await User.findOne({ 
@@ -72,6 +72,41 @@ router.get('/followings',isLoggedIn, async (req, res, next) => { // GET/user/fol
         next(error);
     }
 });
+
+router.get('/:userId', async (req, res, next) => { // GET /user/1
+    try {
+      const fullUserWithoutPassword = await User.findOne({
+        where: { id: req.params.userId },
+        attributes: {
+          exclude: ['password']
+        },
+        include: [{
+          model: Post,
+          attributes: ['id'],
+        }, {
+          model: User,
+          as: 'Followings',
+          attributes: ['id'],
+        }, {
+          model: User,
+          as: 'Followers',
+          attributes: ['id'],
+        }]
+      })
+      if (fullUserWithoutPassword) {
+        const data = fullUserWithoutPassword.toJSON();
+        data.Posts = data.Posts.length; // 개인정보 침해 예방
+        data.Followers = data.Followers.length;
+        data.Followings = data.Followings.length;
+        res.status(200).json(data);
+      } else {
+        res.status(404).json('존재하지 않는 사용자입니다.');
+      }
+    } catch (error) {
+      console.error(error);
+      next(error);
+    }
+  });
 
 router.get('/:userId/posts', async (req, res, next) => { // GET /user/1/posts
     try {
@@ -187,7 +222,7 @@ router.post('/',isNotLoggedIn, async (req, res, next) => { //POST /user/
     }
 });
 
-router.post('/logout', isLoggedIn, (req,res, next) => {
+router.post('/logout', isLoggedIn, (req,res) => {
     req.logout();
     req.session.destroy();
     res.send('ok');
